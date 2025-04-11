@@ -181,77 +181,77 @@ jobs:
         with:
           name: build-${{ matrix.config.upload }}
           path: ./build/export
-    BuildAndroid:
-      name: meson/${{ matrix.config.name }}
-      runs-on: ${{ matrix.config.os }}
-      strategy:
-        fail-fast: false
-        matrix:
-          config:
-          - {
-              name: "android/so/armv7",
-              os: ubuntu-latest,
-              arch: x64,
-              toolchain: "armv7a-linux-androideabi",
-              cpu_family: "arm",
-              cpu: "armv7a",
-              upload: "android-armv7"
-            }
-          - {
-              name: "android/so/arm64",
-              os: ubuntu-latest,
-              arch: x64,
-              toolchain: "aarch64-linux-android",
-              cpu_family: "aarch64",
-              cpu: "aarch64",
-              upload: "android-arm64"
-            },
-      steps:
-        - uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
-        - name: Install Python
-          uses: actions/setup-python@v5.5.0
-          with:
-            python-version: 3.13.3
-            architecture: ${{ matrix.config.arch }}
-        - name: Install Meson
-          run: pip3 install -U meson ninja
-        - name: Install NDK
-          uses: nttld/setup-ndk@v1
-          id: setup-ndk
-          with:
-            ndk-version: r26d
-            add-to-path: false
-        - name: Build
-          run: |
-            cat > android-cross-file.txt <<EOF
-            [constants]
-            ndk_path    = '${{ steps.setup-ndk.outputs.ndk-path }}'
-            toolchain   = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.config.toolchain }}'
-            api         = '21'
+  BuildAndroid:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "android/so/armv7",
+            os: ubuntu-latest,
+            arch: x64,
+            toolchain: "armv7a-linux-androideabi",
+            cpu_family: "arm",
+            cpu: "armv7a",
+            upload: "android-armv7"
+          }
+        - {
+            name: "android/so/arm64",
+            os: ubuntu-latest,
+            arch: x64,
+            toolchain: "aarch64-linux-android",
+            cpu_family: "aarch64",
+            cpu: "aarch64",
+            upload: "android-arm64"
+          },
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: ${{ matrix.config.arch }}
+      - name: Install Meson
+        run: pip3 install -U meson ninja
+      - name: Install NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+          add-to-path: false
+      - name: Build
+        run: |
+          cat > android-cross-file.txt <<EOF
+          [constants]
+          ndk_path    = '${{ steps.setup-ndk.outputs.ndk-path }}'
+          toolchain   = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.config.toolchain }}'
+          api         = '21'
 
-            [host_machine]
-            system      = 'android'
-            cpu_family  = '${{ matrix.config.cpu_family }}'
-            cpu         = '${{ matrix.config.cpu }}'
-            endian      = 'little'
+          [host_machine]
+          system      = 'android'
+          cpu_family  = '${{ matrix.config.cpu_family }}'
+          cpu         = '${{ matrix.config.cpu }}'
+          endian      = 'little'
 
-            [properties]
-            sys_root        = ndk_path + '/sysroot'
-            c_link_args     = ['-fuse-ld=gold']
-            cpp_link_args   = ['-fuse-ld=gold']
+          [properties]
+          sys_root        = ndk_path + '/sysroot'
+          c_link_args     = ['-fuse-ld=gold']
+          cpp_link_args   = ['-fuse-ld=gold']
 
-            [binaries]
-            c           = toolchain + api + '-clang'
-            cpp         = toolchain + api + '-clang++'
-            ar          = toolchain + '-ar'
-            strip       = toolchain + '-strip'
-            EOF
-            meson setup --cross-file android-cross-file.txt build -Ddefault_library=static -Dbuildtype=release -Db_lto=true
-            meson compile --verbose -C build
-        - name: Upload a Build Artifact
-          uses: actions/upload-artifact@v4.6.2
-          with:
-            name: build-${{ matrix.config.upload }}
-            path: ./build/export
+          [binaries]
+          c           = toolchain + api + '-clang'
+          cpp         = toolchain + api + '-clang++'
+          ar          = toolchain + '-ar'
+          strip       = toolchain + '-strip'
+          EOF
+          meson setup --cross-file android-cross-file.txt build -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          meson compile --verbose -C build
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
