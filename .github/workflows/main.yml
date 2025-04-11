@@ -249,7 +249,7 @@ jobs:
           ar          = toolchain_root + 'llvm-ar'
           strip       = toolchain_root + 'llvm-strip'
           EOF
-          meson setup --cross-file android-cross-file.txt build -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          meson setup --cross-file android-cross-file.txt build -Dcpp_std=c++20 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
           meson compile --verbose -C build
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.6.2
