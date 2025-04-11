@@ -1,0 +1,25 @@
+name: Build libs for Unity
+on:
+  workflow_dispatch:
+jobs:
+  BuildLibs:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "Windows/Dll/X64",
+            os: windows-latest,
+            upload: "windows-x64"
+          }
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build
