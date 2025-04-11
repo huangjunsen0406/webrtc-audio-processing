@@ -10,7 +10,7 @@ jobs:
       matrix:
         config:
         - {
-            name: "Windows/Dll/X64",
+            name: "windows/dll/x64",
             os: windows-latest,
             upload: "windows-x64"
           }
@@ -31,7 +31,7 @@ jobs:
           arch: x64
       - name: Build
         run: |
-          meson setup build -Dcpp_std=c++20
+          meson setup build -Dcpp_std=c++20 -Ddefault_library=static
           meson compile --verbose -C build
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.6.2
