@@ -240,8 +240,8 @@ jobs:
 
           [properties]
           sys_root        = ndk_path + '/sysroot'
-          c_link_args     = ['-fuse-ld=gold']
-          cpp_link_args   = ['-fuse-ld=gold']
+          c_link_args     = ['-fuse-ld=lld']
+          cpp_link_args   = ['-fuse-ld=lld']
 
           [binaries]
           c           = toolchain + api + '-clang'
