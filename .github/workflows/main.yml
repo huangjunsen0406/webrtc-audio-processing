@@ -205,7 +205,7 @@ jobs:
             cpu_family: "aarch64",
             cpu: "aarch64",
             upload: "android-arm64"
-          },
+          }
     steps:
       - uses: actions/checkout@v4
         with:
