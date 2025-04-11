@@ -12,6 +12,7 @@ jobs:
         - {
             name: "windows/dll/x64",
             os: windows-latest,
+            arch: x64,
             upload: "windows-x64"
           }
     steps:
@@ -22,16 +23,16 @@ jobs:
         uses: actions/setup-python@v5.5.0
         with:
           python-version: 3.13.3
-          architecture: x64
+          architecture: ${{ matrix.config.arch }}
       - name: Install Meson
         run: pip3 install -U meson ninja
       - name: Set up Visual Studio shell
         uses: egor-tensin/vs-shell@v2
         with:
-          arch: x64
+          arch: ${{ matrix.config.arch }}
       - name: Build
         run: |
-          meson setup build -Dcpp_std=c++20 -Ddefault_library=static -Dbuildtype=release
+          meson setup build -Dcpp_std=c++20 -Ddefault_library=static -Dbuildtype=release -Db_lto=true -Dcpp_link_args="/INCREMENTAL:NO"
           meson compile --verbose -C build
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.6.2
@@ -75,10 +76,182 @@ jobs:
       - name: Build
         run: |
           CERT_PATH=$(python3 -m certifi) && export SSL_CERT_FILE=${CERT_PATH} && export REQUESTS_CA_BUNDLE=${CERT_PATH}
-          meson setup build -Ddefault_library=static -Dbuildtype=release
+          meson setup build -Ddefault_library=static -Dbuildtype=release -Db_lto=true
           meson compile --verbose -C build
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.6.2
         with:
           name: build-${{ matrix.config.upload }}
           path: ./build/export
+  BuildLinux:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "linux/dll/x64",
+            os: ubuntu-latest,
+            upload: "linux-x64"
+          }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: x64
+      - name: Install Meson
+        run: pip3 install -U meson ninja
+      - name: Build
+        run: |
+          meson setup build -Dcpp_std=c++20 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          meson compile --verbose -C build
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
+  BuildIOS:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "ios/lib/x64",
+            os: macos-latest,
+            arch: arm64,
+            upload: "ios"
+          }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: ${{ matrix.config.arch }}
+      - name: Install Certificates
+        run: |
+          pip3 install --upgrade pip
+          pip3 install --upgrade certifi
+      - name: Install Meson
+        run: pip3 install -U meson ninja
+      - name: Build
+        run: |
+          CERT_PATH=$(python3 -m certifi) && export SSL_CERT_FILE=${CERT_PATH} && export REQUESTS_CA_BUNDLE=${CERT_PATH}
+          cat > ios-cross-file.txt <<EOF
+          [host_machine]
+          system = 'darwin'
+          cpu_family = 'aarch64'
+          cpu = 'aarch64'
+          endian = 'little'
+
+          [properties]
+          c_args           = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=11.0']
+          objc_args        = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=11.0']
+          cpp_args         = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=11.0']
+          objcpp_args      = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=11.0']
+          c_link_args      = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=11.0']
+          objc_link_args   = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=11.0']
+          cpp_link_args    = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=11.0']
+          objcpp_link_args = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=11.0']
+
+          [binaries]
+          ar        = '$(xcrun --find --sdk iphoneos ar)'
+          c         = '$(xcrun --find --sdk iphoneos clang)'
+          objc      = '$(xcrun --find --sdk iphoneos clang)'
+          cpp       = '$(xcrun --find --sdk iphoneos clang++)'
+          objcpp    = '$(xcrun --find --sdk iphoneos clang++)'
+          ranlib    = '$(xcrun --find --sdk iphoneos ranlib)'
+          strip     = '$(xcrun --find --sdk iphoneos strip)'
+          pkgconfig = 'false'
+          cmake     = 'false'
+          EOF
+          meson setup --cross-file ios-cross-file.txt build -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          meson compile --verbose -C build
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
+    BuildAndroid:
+      name: meson/${{ matrix.config.name }}
+      runs-on: ${{ matrix.config.os }}
+      strategy:
+        fail-fast: false
+        matrix:
+          config:
+          - {
+              name: "android/so/armv7",
+              os: ubuntu-latest,
+              arch: x64,
+              toolchain: "armv7a-linux-androideabi",
+              cpu_family: "arm",
+              cpu: "armv7a",
+              upload: "android-armv7"
+            }
+          - {
+              name: "android/so/arm64",
+              os: ubuntu-latest,
+              arch: x64,
+              toolchain: "aarch64-linux-android",
+              cpu_family: "aarch64",
+              cpu: "aarch64",
+              upload: "android-arm64"
+            },
+      steps:
+        - uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+        - name: Install Python
+          uses: actions/setup-python@v5.5.0
+          with:
+            python-version: 3.13.3
+            architecture: ${{ matrix.config.arch }}
+        - name: Install Meson
+          run: pip3 install -U meson ninja
+        - name: Install NDK
+          uses: nttld/setup-ndk@v1
+          id: setup-ndk
+          with:
+            ndk-version: r26d
+            add-to-path: false
+        - name: Build
+          run: |
+            cat > android-cross-file.txt <<EOF
+            [constants]
+            ndk_path    = '${{ steps.setup-ndk.outputs.ndk-path }}'
+            toolchain   = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.config.toolchain }}'
+            api         = '21'
+
+            [host_machine]
+            system      = 'android'
+            cpu_family  = '${{ matrix.config.cpu_family }}'
+            cpu         = '${{ matrix.config.cpu }}'
+            endian      = 'little'
+
+            [properties]
+            sys_root        = ndk_path + '/sysroot'
+            c_link_args     = ['-fuse-ld=gold']
+            cpp_link_args   = ['-fuse-ld=gold']
+
+            [binaries]
+            c           = toolchain + api + '-clang'
+            cpp         = toolchain + api + '-clang++'
+            ar          = toolchain + '-ar'
+            strip       = toolchain + '-strip'
+            EOF
+            meson setup --cross-file android-cross-file.txt build -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+            meson compile --verbose -C build
+        - name: Upload a Build Artifact
+          uses: actions/upload-artifact@v4.6.2
+          with:
+            name: build-${{ matrix.config.upload }}
+            path: ./build/export
