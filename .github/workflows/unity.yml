@@ -228,7 +228,8 @@ jobs:
           cat > android-cross-file.txt <<EOF
           [constants]
           ndk_path    = '${{ steps.setup-ndk.outputs.ndk-path }}'
-          toolchain   = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/${{ matrix.config.toolchain }}'
+          toolchain_root = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/'
+          toolchain   = toolchain_root + '${{ matrix.config.toolchain }}'
           api         = '28'
 
           [host_machine]
@@ -245,8 +246,8 @@ jobs:
           [binaries]
           c           = toolchain + api + '-clang'
           cpp         = toolchain + api + '-clang++'
-          ar          = toolchain + '-ar'
-          strip       = toolchain + '-strip'
+          ar          = toolchain_root + 'llvm-ar'
+          strip       = toolchain_root + 'llvm-strip'
           EOF
           meson setup --cross-file android-cross-file.txt build -Ddefault_library=static -Dbuildtype=release -Db_lto=true
           meson compile --verbose -C build
