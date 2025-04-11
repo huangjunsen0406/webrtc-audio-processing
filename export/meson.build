@@ -14,7 +14,7 @@ top_incdir = include_directories('..')
 
 host_system = host_machine.system()
 
-if host_system = 'ios'
+if host_system == 'ios'
   libwebrtc_apm = static_library('webrtc_apm',
     export_sources,
     name_prefix: 'lib',
