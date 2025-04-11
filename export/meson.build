@@ -13,6 +13,15 @@ install_headers(export_headers,
 top_incdir = include_directories('..')
 
 host_system = host_machine.system()
+if host_system == 'darwin' and meson.is_cross_build()
+  ios_test_code = '''#include <TargetConditionals.h>
+  #if ! TARGET_OS_IPHONE
+  #error "Not iOS/tvOS/watchOS/iPhoneSimulator"
+  #endif'''
+  if cc.compiles(ios_test_code, name : 'building for iOS')
+    host_system = 'ios'
+  endif
+endif
 
 if host_system == 'ios'
   libwebrtc_apm = static_library('webrtc_apm',
