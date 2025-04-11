@@ -1,0 +1,40 @@
+name: Build libs for Unity
+on:
+  workflow_dispatch:
+jobs:
+  BuildLibs:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "Windows/Dll/X64",
+            os: windows-latest,
+            upload: "windows-x64"
+          }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: x64
+      - name: Install Meson
+        run: pip3 install -U meson ninja
+      - name: Set up Visual Studio shell
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
+      - name: Build
+        run: |
+          meson setup build -Dcpp_std=c++20
+          meson compile --verbose -C build
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
