@@ -240,8 +240,10 @@ jobs:
 
           [properties]
           sys_root        = ndk_path + '/sysroot'
-          c_link_args     = ['-fuse-ld=lld']
-          cpp_link_args   = ['-fuse-ld=lld']
+          c_args          = ['-Os', '-fvisibility=hidden', '-ffunction-sections', '-fdata-sections']
+          cpp_args        = ['-Os', '-fvisibility=hidden', '-ffunction-sections', '-fdata-sections']
+          c_link_args     = ['-fuse-ld=lld', '-Wl,--gc-sections']
+          cpp_link_args   = ['-fuse-ld=lld', '-Wl,--gc-sections', '-static-libstdc++']
 
           [binaries]
           c           = toolchain + api + '-clang'
