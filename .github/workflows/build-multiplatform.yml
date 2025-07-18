@@ -1,4 +1,4 @@
-name: Build libs for Unity
+name: Build WebRTC Audio Processing Libraries
 on:
   workflow_dispatch:
 jobs:
@@ -14,6 +14,12 @@ jobs:
             os: windows-latest,
             arch: x64,
             upload: "windows-x64"
+          }
+        - {
+            name: "windows/dll/x86",
+            os: windows-latest,
+            arch: x86,
+            upload: "windows-x86"
           }
     steps:
       - uses: actions/checkout@v4
@@ -95,6 +101,11 @@ jobs:
             os: ubuntu-latest,
             upload: "linux-x64"
           }
+        - {
+            name: "linux/dll/arm64",
+            os: ubuntu-latest,
+            upload: "linux-arm64"
+          }
     steps:
       - uses: actions/checkout@v4
         with:
@@ -106,9 +117,31 @@ jobs:
           architecture: x64
       - name: Install Meson
         run: pip3 install -U meson ninja
+      - name: Install cross-compilation tools
+        if: matrix.config.upload == 'linux-arm64'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
       - name: Build
         run: |
-          meson setup build -Dcpp_std=c++20 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          if [ "${{ matrix.config.upload }}" = "linux-arm64" ]; then
+            cat > linux-arm64-cross-file.txt <<EOF
+          [host_machine]
+          system = 'linux'
+          cpu_family = 'aarch64'
+          cpu = 'aarch64'
+          endian = 'little'
+          
+          [binaries]
+          c = 'aarch64-linux-gnu-gcc'
+          cpp = 'aarch64-linux-gnu-g++'
+          ar = 'aarch64-linux-gnu-ar'
+          strip = 'aarch64-linux-gnu-strip'
+          EOF
+            meson setup --cross-file linux-arm64-cross-file.txt build -Dcpp_std=c++20 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          else
+            meson setup build -Dcpp_std=c++20 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          fi
           meson compile --verbose -C build
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v4.6.2
