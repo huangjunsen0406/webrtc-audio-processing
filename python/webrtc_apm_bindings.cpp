@@ -4,24 +4,28 @@
 #include <vector>
 #include <memory>
 
-// 包含WebRTC音频处理的C接口
-#include "../export/export.h"
+// 暂时注释掉WebRTC的实际实现，先测试基本的绑定
+// #include "../export/export.h"
 
 namespace py = pybind11;
+
+// 临时的句柄类型，用于测试
+typedef void* AudioProcessingHandle;
 
 class AudioProcessor {
 public:
     AudioProcessor() {
-        handle_ = WebRTC_APM_Create();
-        if (!handle_) {
-            throw std::runtime_error("Failed to create WebRTC Audio Processing instance");
-        }
+        // 暂时使用虚拟实现
+        handle_ = nullptr; // WebRTC_APM_Create();
+        // if (!handle_) {
+        //     throw std::runtime_error("Failed to create WebRTC Audio Processing instance");
+        // }
     }
 
     ~AudioProcessor() {
-        if (handle_) {
-            WebRTC_APM_Destroy(handle_);
-        }
+        // if (handle_) {
+        //     WebRTC_APM_Destroy(handle_);
+        // }
     }
 
     // 配置回声消除
