@@ -291,3 +291,65 @@ jobs:
         with:
           name: build-${{ matrix.config.upload }}
           path: ./build/export
+
+  PackageAllLibs:
+    name: Package All Libraries
+    runs-on: ubuntu-latest
+    needs: [BuildWindows, BuildMacOS, BuildLinux, BuildIOS, BuildAndroid]
+    if: always() && (needs.BuildWindows.result == 'success' || needs.BuildMacOS.result == 'success' || needs.BuildLinux.result == 'success' || needs.BuildIOS.result == 'success' || needs.BuildAndroid.result == 'success')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: Create unified directory structure
+        run: |
+          mkdir -p webrtc-audio-processing-libs/{windows/{x86,x64},macos/{x64,arm64},linux/{x64,arm64},ios,android/{armv7,arm64}}
+          
+          # Windows
+          if [ -d "artifacts/build-windows-x86" ]; then
+            cp artifacts/build-windows-x86/* webrtc-audio-processing-libs/windows/x86/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-windows-x64" ]; then
+            cp artifacts/build-windows-x64/* webrtc-audio-processing-libs/windows/x64/ 2>/dev/null || true
+          fi
+          
+          # macOS
+          if [ -d "artifacts/build-macos-x64" ]; then
+            cp artifacts/build-macos-x64/* webrtc-audio-processing-libs/macos/x64/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-macos-arm64" ]; then
+            cp artifacts/build-macos-arm64/* webrtc-audio-processing-libs/macos/arm64/ 2>/dev/null || true
+          fi
+          
+          # Linux
+          if [ -d "artifacts/build-linux-x64" ]; then
+            cp artifacts/build-linux-x64/* webrtc-audio-processing-libs/linux/x64/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-linux-arm64" ]; then
+            cp artifacts/build-linux-arm64/* webrtc-audio-processing-libs/linux/arm64/ 2>/dev/null || true
+          fi
+          
+          # iOS
+          if [ -d "artifacts/build-ios" ]; then
+            cp artifacts/build-ios/* webrtc-audio-processing-libs/ios/ 2>/dev/null || true
+          fi
+          
+          # Android
+          if [ -d "artifacts/build-android-armv7" ]; then
+            cp artifacts/build-android-armv7/* webrtc-audio-processing-libs/android/armv7/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-android-arm64" ]; then
+            cp artifacts/build-android-arm64/* webrtc-audio-processing-libs/android/arm64/ 2>/dev/null || true
+          fi
+          
+          # Show the final structure
+          echo "Final directory structure:"
+          find webrtc-audio-processing-libs -type f | sort
+          
+      - name: Upload unified package
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: webrtc-audio-processing-libs-all-platforms
+          path: webrtc-audio-processing-libs/
