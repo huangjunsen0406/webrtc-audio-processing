@@ -39,16 +39,12 @@ jobs:
           CIBW_ARCHS_MACOS: "x86_64 arm64"  # macOS支持Intel和Apple Silicon
           CIBW_ARCHS_LINUX: "x86_64"  # Linux只支持x64（先测试）
           CIBW_ARCHS_WINDOWS: "AMD64"  # Windows只支持x64
-          # 在构建前安装系统依赖
-          CIBW_BEFORE_ALL_LINUX: >
-            pip install meson ninja
-          CIBW_BEFORE_ALL_MACOS: >
-            brew install meson ninja pkg-config
-          CIBW_BEFORE_ALL_WINDOWS: >
-            pip install meson ninja
-          # 设置环境变量
-          CIBW_ENVIRONMENT: >
-            PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+          # 在构建前安装系统依赖 - 现在使用setuptools，不需要meson
+          CIBW_BEFORE_ALL_LINUX: ""
+          CIBW_BEFORE_ALL_MACOS: ""
+          CIBW_BEFORE_ALL_WINDOWS: ""
+          # 设置环境变量 - 使用setuptools不需要特殊环境变量
+          CIBW_ENVIRONMENT: ""
         run: |
           cibuildwheel --output-dir wheelhouse
 

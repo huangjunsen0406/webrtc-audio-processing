@@ -3,10 +3,8 @@ requires = [
     "setuptools>=61.0",
     "wheel",
     "pybind11>=2.10.0",
-    "meson-python>=0.12.0",
-    "ninja",
 ]
-build-backend = "mesonpy"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "webrtc_audio_processing"
@@ -60,8 +58,7 @@ Repository = "https://github.com/your-username/webrtc-audio-processing"
 Issues = "https://github.com/your-username/webrtc-audio-processing/issues"
 Documentation = "https://github.com/your-username/webrtc-audio-processing/blob/main/README.md"
 
-[tool.meson-python.args]
-setup = ["-Ddefault_library=static"]
+# 移除meson相关配置，改用setuptools
 
 [tool.cibuildwheel]
 # 构建配置
