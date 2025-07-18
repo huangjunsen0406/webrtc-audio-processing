@@ -210,7 +210,7 @@ public:
         float* output_data = static_cast<float*>(output_buf.ptr);
         
         // Process audio samples
-        for (size_t i = 0; i < buf.size; ++i) {
+        for (size_t i = 0; i < static_cast<size_t>(buf.size); ++i) {
             float sample = input_data[i];
             
             // Apply processing chain
