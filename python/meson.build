@@ -2,7 +2,7 @@
 
 # 查找Python和pybind11
 python = import('python').find_installation()
-pybind11_dep = dependency('pybind11', required: true)
+pybind11_dep = dependency('pybind11', required: true, fallback: ['pybind11', 'pybind11_dep'])
 
 # 包含路径
 python_inc = include_directories('.')

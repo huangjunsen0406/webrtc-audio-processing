@@ -34,15 +34,19 @@ jobs:
 
       - name: Build wheels
         env:
-          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"  # 支持Python 3.8-3.12
+          CIBW_BUILD: "cp39-* cp311-*"  # 支持Python 3.9和3.11（先测试）
           CIBW_SKIP: "*-win32 *-manylinux_i686"  # 跳过32位构建
           CIBW_ARCHS_MACOS: "x86_64 arm64"  # macOS支持Intel和Apple Silicon
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"  # Linux支持x64和ARM64
+          CIBW_ARCHS_LINUX: "x86_64"  # Linux只支持x64（先测试）
           CIBW_ARCHS_WINDOWS: "AMD64"  # Windows只支持x64
           # 在构建前安装系统依赖
           CIBW_BEFORE_ALL_LINUX: >
-            yum install -y epel-release &&
-            yum install -y gcc-c++ meson ninja-build pkgconfig
+            python -m pip install meson ninja &&
+            if command -v yum >/dev/null 2>&1; then
+              yum install -y gcc-c++ pkgconfig || yum install -y gcc gcc-c++ pkg-config;
+            elif command -v apt-get >/dev/null 2>&1; then
+              apt-get update && apt-get install -y build-essential pkg-config;
+            fi
           CIBW_BEFORE_ALL_MACOS: >
             brew install meson ninja pkg-config
           CIBW_BEFORE_ALL_WINDOWS: >

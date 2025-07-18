@@ -9,7 +9,7 @@ requires = [
 build-backend = "mesonpy"
 
 [project]
-name = "webrtc-audio-processing"
+name = "webrtc_audio_processing"
 version = "2.1.0"
 description = "WebRTC Audio Processing Library Python Bindings"
 readme = "README.md"
@@ -61,7 +61,7 @@ Issues = "https://github.com/your-username/webrtc-audio-processing/issues"
 Documentation = "https://github.com/your-username/webrtc-audio-processing/blob/main/README.md"
 
 [tool.meson-python.args]
-setup = ["--buildtype=release", "-Ddefault_library=static"]
+setup = ["-Ddefault_library=static"]
 
 [tool.cibuildwheel]
 # 构建配置
