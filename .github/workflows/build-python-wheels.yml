@@ -166,5 +166,5 @@ jobs:
 
       - name: Install and test wheel
         run: |
-          pip install ./wheelhouse/*.whl
+          pip install --force-reinstall --find-links ./wheelhouse webrtc_audio_processing
           python -c "import webrtc_apm; print('WebRTC Audio Processing imported successfully!')"
