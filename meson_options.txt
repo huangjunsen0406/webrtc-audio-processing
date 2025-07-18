@@ -7,3 +7,6 @@ option('neon', type: 'feature',
 option('inline-sse', type: 'boolean',
        value: true,
        description: 'Enable inline SSE/SSE2 optimisations (i.e. assume CPU supports SSE/SSE2)')
+option('python_bindings', type: 'boolean',
+       value: false,
+       description: 'Build Python bindings using pybind11')

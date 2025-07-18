@@ -1,0 +1,92 @@
+[build-system]
+requires = [
+    "setuptools>=61.0",
+    "wheel",
+    "pybind11>=2.10.0",
+    "meson-python>=0.12.0",
+    "ninja",
+]
+build-backend = "mesonpy"
+
+[project]
+name = "webrtc-audio-processing"
+version = "2.1.0"
+description = "WebRTC Audio Processing Library Python Bindings"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "WebRTC Audio Processing Contributors"},
+]
+maintainers = [
+    {name = "WebRTC Audio Processing Contributors"},
+]
+keywords = ["webrtc", "audio", "processing", "noise-suppression", "echo-cancellation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.19.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "pytest-cov",
+    "black",
+    "isort",
+    "mypy",
+]
+docs = [
+    "sphinx",
+    "sphinx-rtd-theme",
+]
+
+[project.urls]
+Homepage = "https://github.com/your-username/webrtc-audio-processing"
+Repository = "https://github.com/your-username/webrtc-audio-processing"
+Issues = "https://github.com/your-username/webrtc-audio-processing/issues"
+Documentation = "https://github.com/your-username/webrtc-audio-processing/blob/main/README.md"
+
+[tool.meson-python.args]
+setup = ["--buildtype=release", "-Ddefault_library=static"]
+
+[tool.cibuildwheel]
+# 构建配置
+build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
+skip = "*-win32 *-manylinux_i686"
+
+[tool.cibuildwheel.macos]
+archs = ["x86_64", "arm64"]
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64", "aarch64"]
+
+[tool.cibuildwheel.windows]
+archs = ["AMD64"]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

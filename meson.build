@@ -216,3 +216,8 @@ meson.override_dependency(apm_project_name, audio_processing_dep)
 
 subdir('examples')
 subdir('export')
+
+# Python绑定（可选）
+if get_option('python_bindings')
+  subdir('python')
+endif
