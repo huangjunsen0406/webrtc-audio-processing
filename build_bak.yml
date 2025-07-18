@@ -1,0 +1,506 @@
+name: Build libs for Unity - Multi-Architecture Support
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Platforms to build (comma-separated): windows,macos,linux,ios,android'
+        required: false
+        default: 'windows,macos,linux,ios,android'
+
+jobs:
+  BuildWindows:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    if: contains(github.event.inputs.platforms, 'windows') || github.event.inputs.platforms == ''
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "windows/dll/x86",
+            os: windows-latest,
+            arch: x86,
+            target_arch: "x86",
+            upload: "windows-x86"
+          }
+        - {
+            name: "windows/dll/x64",
+            os: windows-latest,
+            arch: x64,
+            target_arch: "x64",
+            upload: "windows-x64"
+          }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: ${{ matrix.config.arch }}
+      - name: Install Meson
+        run: pip3 install -U meson ninja
+      - name: Set up Visual Studio shell
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: ${{ matrix.config.target_arch }}
+      - name: Clean build directory
+        run: |
+          if (Test-Path "build") {
+            Remove-Item -Recurse -Force "build"
+          }
+      - name: Build
+        run: |
+          $mesonArgs = @(
+            "-Dcpp_std=c++20",
+            "-Ddefault_library=shared", 
+            "-Dbuildtype=release",
+            "-Db_lto=true"
+          )
+          $mesonArgs += "-Dcpp_link_args=/INCREMENTAL:NO"
+          meson setup build @mesonArgs
+          meson compile --verbose -C build
+      - name: Create export directory and copy artifacts
+        run: |
+          if (-not (Test-Path "build/export")) {
+            New-Item -ItemType Directory -Path "build/export" -Force
+          }
+          # Find and copy only dynamic libraries with webrtc_apm naming
+          Get-ChildItem -Path build -Recurse -Include "*webrtc_apm*.dll" | ForEach-Object {
+            $destPath = "build/export/$($_.Name)"
+            if (-not (Test-Path $destPath)) {
+              Copy-Item $_.FullName -Destination "build/export" -Force
+              Write-Host "Copied: $($_.FullName)"
+            } else {
+              Write-Host "Skipped duplicate: $($_.Name)"
+            }
+          }
+          # List what's in export directory
+          Get-ChildItem -Path build/export
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
+  BuildMacOS:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    if: contains(github.event.inputs.platforms, 'macos') || github.event.inputs.platforms == ''
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "macos/dll/x64",
+            os: macos-13,
+            arch: x64,
+            upload: "macos-x64"
+          }
+        - {
+            name: "macos/dll/arm64",
+            os: macos-latest,
+            arch: arm64,
+            upload: "macos-arm64"
+          }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: ${{ matrix.config.arch }}
+      - name: Install Certificates
+        run: |
+          pip3 install --upgrade pip
+          pip3 install --upgrade certifi
+      - name: Install Meson
+        run: pip3 install -U meson ninja
+      - name: Clean build directory
+        run: |
+          if [ -d "build" ]; then
+            rm -rf build
+          fi
+      - name: Build
+        run: |
+          CERT_PATH=$(python3 -m certifi) && export SSL_CERT_FILE=${CERT_PATH} && export REQUESTS_CA_BUNDLE=${CERT_PATH}
+          meson setup build -Ddefault_library=shared -Dbuildtype=release -Db_lto=true
+          meson compile --verbose -C build
+      - name: Create export directory and copy artifacts
+        run: |
+          mkdir -p build/export
+          # Find and copy only dynamic libraries with webrtc_apm naming
+          find build -name "*webrtc_apm*.so" -o -name "*webrtc_apm*.dylib" | while read file; do
+            echo "Found: $file"
+            cp "$file" build/export/
+          done
+          ls -la build/export/
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
+  BuildLinux:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    if: contains(github.event.inputs.platforms, 'linux') || github.event.inputs.platforms == ''
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "linux/lib/x64",
+            os: ubuntu-latest,
+            arch: "x86_64",
+            cross_compile: false,
+            upload: "linux-x64"
+          }
+        - {
+            name: "linux/lib/arm64",
+            os: ubuntu-latest,
+            arch: "aarch64",
+            cross_compile: true,
+            upload: "linux-arm64"
+          }
+        - {
+            name: "linux/lib/armv7",
+            os: ubuntu-latest,
+            arch: "armv7l",
+            cross_compile: true,
+            upload: "linux-armv7"
+          }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: x64
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config
+          pip3 install -U meson ninja
+      - name: Install cross-compilation tools
+        if: matrix.config.cross_compile
+        run: |
+          if [ "${{ matrix.config.arch }}" = "aarch64" ]; then
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          elif [[ "${{ matrix.config.arch }}" =~ ^armv[67]l?$ ]]; then
+            sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf
+          fi
+      - name: Clean build directory
+        run: |
+          if [ -d "build" ]; then
+            rm -rf build
+          fi
+      - name: Create cross-compilation file
+        if: matrix.config.cross_compile
+        run: |
+          if [ "${{ matrix.config.arch }}" = "aarch64" ]; then
+            cat > linux-cross-file.txt <<EOF
+          [host_machine]
+          system = 'linux'
+          cpu_family = 'aarch64'
+          cpu = 'aarch64'
+          endian = 'little'
+
+          [properties]
+          c_args = ['-fPIC', '-Os', '-fvisibility=hidden']
+          cpp_args = ['-fPIC', '-Os', '-fvisibility=hidden']
+          c_link_args = ['-Wl,--gc-sections']
+          cpp_link_args = ['-Wl,--gc-sections']
+
+          [binaries]
+          c = 'aarch64-linux-gnu-gcc'
+          cpp = 'aarch64-linux-gnu-g++'
+          ar = 'aarch64-linux-gnu-ar'
+          strip = 'aarch64-linux-gnu-strip'
+          pkgconfig = 'pkg-config'
+          EOF
+          elif [ "${{ matrix.config.arch }}" = "armv7l" ]; then
+            cat > linux-cross-file.txt <<EOF
+          [host_machine]
+          system = 'linux'
+          cpu_family = 'arm'
+          cpu = 'armv7l'
+          endian = 'little'
+
+          [properties]
+          c_args = ['-fPIC', '-Os', '-fvisibility=hidden', '-march=armv7-a', '-mfpu=neon-vfpv4', '-mfloat-abi=hard']
+          cpp_args = ['-fPIC', '-Os', '-fvisibility=hidden', '-march=armv7-a', '-mfpu=neon-vfpv4', '-mfloat-abi=hard']
+          c_link_args = ['-Wl,--gc-sections']
+          cpp_link_args = ['-Wl,--gc-sections']
+
+          [binaries]
+          c = 'arm-linux-gnueabihf-gcc'
+          cpp = 'arm-linux-gnueabihf-g++'
+          ar = 'arm-linux-gnueabihf-ar'
+          strip = 'arm-linux-gnueabihf-strip'
+          pkgconfig = 'pkg-config'
+          EOF
+          fi
+      - name: Build
+        run: |
+          if [ "${{ matrix.config.cross_compile }}" = "true" ]; then
+            meson setup build --cross-file=linux-cross-file.txt -Dcpp_std=c++20 -Ddefault_library=shared -Dbuildtype=release -Db_lto=true
+          else
+            meson setup build -Dcpp_std=c++20 -Ddefault_library=shared -Dbuildtype=release -Db_lto=true
+          fi
+          meson compile --verbose -C build
+      - name: Create export directory and copy artifacts
+        run: |
+          mkdir -p build/export
+          # Find and copy only dynamic libraries with webrtc_apm naming
+          find build -name "*webrtc_apm*.so" -o -name "*webrtc_apm*.dylib" | while read file; do
+            echo "Found: $file"
+            cp "$file" build/export/
+          done
+          ls -la build/export/
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
+  BuildIOS:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    if: contains(github.event.inputs.platforms, 'ios') || github.event.inputs.platforms == ''
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "ios/lib/x64",
+            os: macos-latest,
+            arch: arm64,
+            upload: "ios"
+          }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: ${{ matrix.config.arch }}
+      - name: Install Certificates
+        run: |
+          pip3 install --upgrade pip
+          pip3 install --upgrade certifi
+      - name: Install Meson
+        run: pip3 install -U meson ninja
+      - name: Clean build directory
+        run: |
+          if [ -d "build" ]; then
+            rm -rf build
+          fi
+      - name: Build
+        run: |
+          CERT_PATH=$(python3 -m certifi) && export SSL_CERT_FILE=${CERT_PATH} && export REQUESTS_CA_BUNDLE=${CERT_PATH}
+          cat > ios-cross-file.txt <<EOF
+          [host_machine]
+          system = 'darwin'
+          cpu_family = 'aarch64'
+          cpu = 'aarch64'
+          endian = 'little'
+
+          [properties]
+          c_args           = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=12.0']
+          objc_args        = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=12.0']
+          cpp_args         = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=12.0']
+          objcpp_args      = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=12.0']
+          c_link_args      = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=12.0']
+          objc_link_args   = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=12.0']
+          cpp_link_args    = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=12.0']
+          objcpp_link_args = ['-arch', 'arm64', '--sysroot=$(xcrun --sdk iphoneos --show-sdk-path)', '-miphoneos-version-min=12.0']
+
+          [binaries]
+          ar        = '$(xcrun --find --sdk iphoneos ar)'
+          c         = '$(xcrun --find --sdk iphoneos clang)'
+          objc      = '$(xcrun --find --sdk iphoneos clang)'
+          cpp       = '$(xcrun --find --sdk iphoneos clang++)'
+          objcpp    = '$(xcrun --find --sdk iphoneos clang++)'
+          ranlib    = '$(xcrun --find --sdk iphoneos ranlib)'
+          strip     = '$(xcrun --find --sdk iphoneos strip)'
+          pkgconfig = 'false'
+          cmake     = 'false'
+          EOF
+          meson setup --cross-file ios-cross-file.txt build -Ddefault_library=shared -Dbuildtype=release -Db_lto=true
+          meson compile --verbose -C build
+      - name: Create export directory and copy artifacts
+        run: |
+          mkdir -p build/export
+          # Find and copy only dynamic libraries with webrtc_apm naming
+          find build -name "*webrtc_apm*.so" -o -name "*webrtc_apm*.dylib" | while read file; do
+            echo "Found: $file"
+            cp "$file" build/export/
+          done
+          ls -la build/export/
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
+  BuildAndroid:
+    name: meson/${{ matrix.config.name }}
+    runs-on: ${{ matrix.config.os }}
+    if: contains(github.event.inputs.platforms, 'android') || github.event.inputs.platforms == ''
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+        - {
+            name: "android/so/armv7",
+            os: ubuntu-latest,
+            arch: x64,
+            toolchain: "armv7a-linux-androideabi",
+            cpu_family: "arm",
+            cpu: "armv7a",
+            upload: "android-armv7"
+          }
+        - {
+            name: "android/so/arm64",
+            os: ubuntu-latest,
+            arch: x64,
+            toolchain: "aarch64-linux-android",
+            cpu_family: "aarch64",
+            cpu: "aarch64",
+            upload: "android-arm64"
+          }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Python
+        uses: actions/setup-python@v5.5.0
+        with:
+          python-version: 3.13.3
+          architecture: ${{ matrix.config.arch }}
+      - name: Install Meson
+        run: pip3 install -U meson ninja
+      - name: Install NDK
+        uses: nttld/setup-ndk@v1
+        id: setup-ndk
+        with:
+          ndk-version: r26d
+          add-to-path: false
+      - name: Clean build directory
+        run: |
+          if [ -d "build" ]; then
+            rm -rf build
+          fi
+      - name: Build
+        run: |
+          cat > android-cross-file.txt <<EOF
+          [constants]
+          ndk_path    = '${{ steps.setup-ndk.outputs.ndk-path }}'
+          toolchain_root = ndk_path + '/toolchains/llvm/prebuilt/linux-x86_64/bin/'
+          toolchain   = toolchain_root + '${{ matrix.config.toolchain }}'
+          api         = '28'
+
+          [host_machine]
+          system      = 'android'
+          cpu_family  = '${{ matrix.config.cpu_family }}'
+          cpu         = '${{ matrix.config.cpu }}'
+          endian      = 'little'
+
+          [properties]
+          sys_root        = ndk_path + '/sysroot'
+          c_args          = ['-Os', '-fvisibility=hidden', '-ffunction-sections', '-fdata-sections']
+          cpp_args        = ['-Os', '-fvisibility=hidden', '-ffunction-sections', '-fdata-sections']
+          c_link_args     = ['-fuse-ld=lld', '-Wl,--gc-sections']
+          cpp_link_args   = ['-fuse-ld=lld', '-Wl,--gc-sections', '-static-libstdc++']
+
+          [binaries]
+          c           = toolchain + api + '-clang'
+          cpp         = toolchain + api + '-clang++'
+          ar          = toolchain_root + 'llvm-ar'
+          strip       = toolchain_root + 'llvm-strip'
+          EOF
+          meson setup --cross-file android-cross-file.txt build -Ddefault_library=shared -Dbuildtype=release -Db_lto=true
+          meson compile --verbose -C build
+      - name: Create export directory and copy artifacts
+        run: |
+          mkdir -p build/export
+          # Find and copy only dynamic libraries with webrtc_apm naming
+          find build -name "*webrtc_apm*.so" -o -name "*webrtc_apm*.dylib" | while read file; do
+            echo "Found: $file"
+            cp "$file" build/export/
+          done
+          ls -la build/export/
+      - name: Upload a Build Artifact
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: build-${{ matrix.config.upload }}
+          path: ./build/export
+
+  PackageAllLibs:
+    name: Package All Libraries
+    runs-on: ubuntu-latest
+    needs: [BuildWindows, BuildMacOS, BuildLinux, BuildIOS, BuildAndroid]
+    if: always() && (needs.BuildWindows.result == 'success' || needs.BuildMacOS.result == 'success' || needs.BuildLinux.result == 'success' || needs.BuildIOS.result == 'success' || needs.BuildAndroid.result == 'success')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+      
+      - name: Create unified directory structure
+        run: |
+          mkdir -p webrtc-audio-processing-libs/{windows/{x86,x64},macos/{x64,arm64},linux/{x64,arm64,armv7},ios,android/{armv7,arm64}}
+          
+          # Windows
+          if [ -d "artifacts/build-windows-x86" ]; then
+            cp artifacts/build-windows-x86/* webrtc-audio-processing-libs/windows/x86/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-windows-x64" ]; then
+            cp artifacts/build-windows-x64/* webrtc-audio-processing-libs/windows/x64/ 2>/dev/null || true
+          fi
+          
+          # macOS
+          if [ -d "artifacts/build-macos-x64" ]; then
+            cp artifacts/build-macos-x64/* webrtc-audio-processing-libs/macos/x64/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-macos-arm64" ]; then
+            cp artifacts/build-macos-arm64/* webrtc-audio-processing-libs/macos/arm64/ 2>/dev/null || true
+          fi
+          
+          # Linux
+          if [ -d "artifacts/build-linux-x64" ]; then
+            cp artifacts/build-linux-x64/* webrtc-audio-processing-libs/linux/x64/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-linux-arm64" ]; then
+            cp artifacts/build-linux-arm64/* webrtc-audio-processing-libs/linux/arm64/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-linux-armv7" ]; then
+            cp artifacts/build-linux-armv7/* webrtc-audio-processing-libs/linux/armv7/ 2>/dev/null || true
+          fi
+          
+          # iOS
+          if [ -d "artifacts/build-ios" ]; then
+            cp artifacts/build-ios/* webrtc-audio-processing-libs/ios/ 2>/dev/null || true
+          fi
+          
+          # Android
+          if [ -d "artifacts/build-android-armv7" ]; then
+            cp artifacts/build-android-armv7/* webrtc-audio-processing-libs/android/armv7/ 2>/dev/null || true
+          fi
+          if [ -d "artifacts/build-android-arm64" ]; then
+            cp artifacts/build-android-arm64/* webrtc-audio-processing-libs/android/arm64/ 2>/dev/null || true
+          fi
+          
+          # Show the final structure
+          echo "Final directory structure:"
+          find webrtc-audio-processing-libs -type f | sort
+          
+      - name: Upload unified package
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: webrtc-audio-processing-libs-all-platforms
+          path: webrtc-audio-processing-libs/
