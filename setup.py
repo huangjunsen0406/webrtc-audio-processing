@@ -110,11 +110,8 @@ if platform.system() == "Windows":
             lib_path = "./vcpkg/installed/x64-windows/lib"
             if os.path.exists(lib_path):
                 absl_library_dirs.append(lib_path)
-            # Add required Abseil libraries for Windows vcpkg
-            absl_libraries.extend([
-                'absl_base', 'absl_flags', 'absl_strings', 'absl_numeric',
-                'absl_synchronization', 'absl_bad_optional_access', 'absl_time'
-            ])
+                # For Windows, don't add Abseil libraries here - they will be linked dynamically
+                # or included in the WebRTC DLL
         else:
             # Fallback to system vcpkg paths
             possible_vcpkg_paths = [
@@ -128,11 +125,6 @@ if platform.system() == "Windows":
                     lib_path = path.replace("/include", "/lib")
                     if os.path.exists(lib_path):
                         absl_library_dirs.append(lib_path)
-                    # Add required Abseil libraries for Windows vcpkg
-                    absl_libraries.extend([
-                        'absl_base', 'absl_flags', 'absl_strings', 'absl_numeric',
-                        'absl_synchronization', 'absl_bad_optional_access', 'absl_time'
-                    ])
                     break
 else:
     extra_link_args = ["-std=c++20"]
@@ -178,7 +170,12 @@ all_include_dirs = [
 
 # Combine library directories and libraries
 all_library_dirs = library_dirs + absl_library_dirs
-all_libraries = libraries + absl_libraries
+if platform.system() == "Windows":
+    # On Windows with shared library, Abseil should be included in the WebRTC DLL
+    all_libraries = libraries
+else:
+    # On Unix with static libraries, need to link Abseil separately
+    all_libraries = libraries + absl_libraries
 
 # Setup for packaging DLLs on Windows
 package_data = {}

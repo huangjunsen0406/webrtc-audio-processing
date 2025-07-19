@@ -63,6 +63,7 @@ jobs:
           .\vcpkg\bootstrap-vcpkg.bat
           .\vcpkg\vcpkg.exe install abseil[cxx17]:x64-windows
           echo "CMAKE_TOOLCHAIN_FILE=$PWD\vcpkg\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+          echo "VCPKG_ROOT=$PWD\vcpkg" >> $env:GITHUB_ENV
 
       - name: Install build dependencies (Ubuntu)
         if: runner.os == 'Linux'
