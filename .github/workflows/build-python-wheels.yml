@@ -92,7 +92,7 @@ jobs:
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DABSL_BUILD_TESTING=OFF \
-            -DCMAKE_CXX_STANDARD=17 \
+            -DCMAKE_CXX_STANDARD=20 \
             -DCMAKE_INSTALL_PREFIX=/usr/local \
             -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
             -DCMAKE_CXX_FLAGS="-fPIC" \
@@ -104,13 +104,13 @@ jobs:
       - name: Build C++ library (Windows)
         if: runner.os == 'Windows'
         run: |
-          meson setup build_cpp -Dcpp_std=c++17 -Ddefault_library=shared -Dbuildtype=release -Db_lto=false -Dwarning_level=1 -Dwerror=false
+          meson setup build_cpp -Dcpp_std=c++20 -Ddefault_library=shared -Dbuildtype=release -Db_lto=false -Dwarning_level=1 -Dwerror=false
           meson compile -C build_cpp
 
       - name: Build C++ library (Unix)
         if: runner.os != 'Windows'
         run: |
-          meson setup build_cpp -Dcpp_std=c++17 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          meson setup build_cpp -Dcpp_std=c++20 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
           meson compile -C build_cpp
 
       - name: Build Python wheel

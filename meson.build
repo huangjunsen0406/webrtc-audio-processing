@@ -4,7 +4,7 @@ project('webrtc-audio-processing', 'c', 'cpp',
   default_options : [ 'warning_level=1',
                       'buildtype=debugoptimized',
                       'c_std=c11',
-                      'cpp_std=c++17',
+                      'cpp_std=c++20',
                     ]
 )
 

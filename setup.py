@@ -99,7 +99,7 @@ if not absl_libraries and not building_sdist:
 # Platform-specific library settings
 if platform.system() == "Windows":
     extra_link_args = []
-    extra_compile_args = ["/std:c++17"]
+    extra_compile_args = ["/std:c++20"]
     # Windows vcpkg paths (common locations)
     if not absl_include_dirs:
         # Check current directory first (GitHub Actions)
@@ -135,8 +135,8 @@ if platform.system() == "Windows":
                     ])
                     break
 else:
-    extra_link_args = ["-std=c++17"]
-    extra_compile_args = ["-std=c++17"]
+    extra_link_args = ["-std=c++20"]
+    extra_compile_args = ["-std=c++20"]
     # Fallback include paths for Unix systems
     if not absl_include_dirs:
         possible_paths = [
@@ -204,7 +204,7 @@ ext_modules = [
         libraries=all_libraries,
         library_dirs=all_library_dirs,
         language="c++",
-        cxx_std=17,
+        cxx_std=20,
         extra_compile_args=extra_compile_args,
         extra_link_args=extra_link_args,
         define_macros=[("VERSION_INFO", '"2.1.0"')],
