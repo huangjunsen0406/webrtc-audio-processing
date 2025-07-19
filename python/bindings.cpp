@@ -22,8 +22,7 @@ public:
     void apply_config(bool echo_cancellation = true, 
                      bool noise_suppression = true,
                      bool gain_control = true,
-                     bool high_pass_filter = true,
-                     bool residual_echo_detector = false) {
+                     bool high_pass_filter = true) {
         webrtc::AudioProcessing::Config config;
         
         // Echo Cancellation
@@ -41,17 +40,14 @@ public:
         config.gain_controller1.target_level_dbfs = 3;
         config.gain_controller1.compression_gain_db = 9;
         config.gain_controller1.enable_limiter = true;
-        config.gain_controller1.analog_level_minimum = 0;
-        config.gain_controller1.analog_level_maximum = 255;
+        config.gain_controller1.analog_gain_controller.enabled = true;
+        config.gain_controller1.analog_gain_controller.clipped_level_min = 0;
         
         // Additional gain controller (AGC2)
         config.gain_controller2.enabled = gain_control;
         
         // High-pass filter
         config.high_pass_filter.enabled = high_pass_filter;
-        
-        // Residual echo detector
-        config.residual_echo_detector.enabled = residual_echo_detector;
         
         apm_->ApplyConfig(config);
     }
@@ -202,7 +198,6 @@ PYBIND11_MODULE(webrtc_audio_processing, m) {
              py::arg("noise_suppression") = true,
              py::arg("gain_control") = true,
              py::arg("high_pass_filter") = true,
-             py::arg("residual_echo_detector") = false,
              R"pbdoc(
              Configure audio processing features.
              
@@ -211,7 +206,6 @@ PYBIND11_MODULE(webrtc_audio_processing, m) {
                  noise_suppression (bool): Enable noise suppression
                  gain_control (bool): Enable automatic gain control
                  high_pass_filter (bool): Enable high-pass filter
-                 residual_echo_detector (bool): Enable residual echo detection
              )pbdoc")
         .def("process_stream", &PyAudioProcessing::process_stream,
              py::arg("input"), py::arg("sample_rate") = 16000, py::arg("num_channels") = 1,
