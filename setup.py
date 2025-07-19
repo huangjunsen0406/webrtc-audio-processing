@@ -134,28 +134,34 @@ else:
     # Fallback include paths for Unix systems
     if not absl_include_dirs:
         possible_paths = [
+            "/usr/local/include",  # Prioritize /usr/local for newer versions
             "/usr/include",
-            "/usr/local/include", 
             "/opt/homebrew/include",  # Apple Silicon Homebrew
             "/usr/local/opt/abseil/include"  # Intel Homebrew
         ]
         for path in possible_paths:
-            if os.path.exists(os.path.join(path, "absl")):
-                absl_include_dirs.append(path)
-                # Add corresponding library paths for macOS homebrew
-                if "/opt/homebrew" in path:
-                    absl_library_dirs.append("/opt/homebrew/lib")
-                elif "/usr/local/opt/abseil" in path:
-                    absl_library_dirs.append("/usr/local/opt/abseil/lib")
-                elif "/usr/local" in path:
-                    absl_library_dirs.append("/usr/local/lib")
-                # Add required Abseil libraries if not found via pkg-config
-                if not absl_libraries:
-                    absl_libraries.extend([
-                        'absl_base', 'absl_flags', 'absl_strings', 'absl_numeric',
-                        'absl_synchronization', 'absl_bad_optional_access', 'absl_time'
-                    ])
-                break
+            absl_path = os.path.join(path, "absl")
+            if os.path.exists(absl_path):
+                # Check for a specific header that should exist in newer versions
+                nullability_header = os.path.join(absl_path, "base", "nullability.h")
+                if os.path.exists(nullability_header):
+                    absl_include_dirs.append(path)
+                    # Add corresponding library paths
+                    if "/opt/homebrew" in path:
+                        absl_library_dirs.append("/opt/homebrew/lib")
+                    elif "/usr/local/opt/abseil" in path:
+                        absl_library_dirs.append("/usr/local/opt/abseil/lib")
+                    elif "/usr/local" in path:
+                        absl_library_dirs.append("/usr/local/lib")
+                    elif "/usr" in path:
+                        absl_library_dirs.append("/usr/lib")
+                    # Add required Abseil libraries if not found via pkg-config
+                    if not absl_libraries:
+                        absl_libraries.extend([
+                            'absl_base', 'absl_flags', 'absl_strings', 'absl_numeric',
+                            'absl_synchronization', 'absl_bad_optional_access', 'absl_time'
+                        ])
+                    break
 
 # Combine include directories
 all_include_dirs = [
