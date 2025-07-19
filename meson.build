@@ -78,6 +78,8 @@ if ['darwin', 'ios'].contains(host_system)
   if host_system == 'ios'
     os_cflags += ['-DWEBRTC_IOS']
   endif
+  # Add CoreFoundation framework for macOS
+  os_deps += [dependency('appleframeworks', modules : ['CoreFoundation'])]
   have_posix = true
 elif host_system == 'android'
   os_cflags += ['-DWEBRTC_ANDROID', '-DWEBRTC_LINUX']
