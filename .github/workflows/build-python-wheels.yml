@@ -104,7 +104,7 @@ jobs:
       - name: Build C++ library (Windows)
         if: runner.os == 'Windows'
         run: |
-          meson setup build_cpp -Dcpp_std=c++17 -Ddefault_library=static -Dbuildtype=release -Db_lto=true -Dwarning_level=1 -Dwerror=false
+          meson setup build_cpp -Dcpp_std=c++17 -Ddefault_library=shared -Dbuildtype=release -Db_lto=false -Dwarning_level=1 -Dwerror=false
           meson compile -C build_cpp
 
       - name: Build C++ library (Unix)

@@ -24,24 +24,30 @@ else:
             "No build directory found. Please run 'meson setup build_cpp' first."
         )
     # WebRTC library directories and libraries
-    library_dirs = [
-        f"./{build_dir}/webrtc/modules/audio_processing",
-        f"./{build_dir}/webrtc/api", 
-        f"./{build_dir}/webrtc/common_audio",
-        f"./{build_dir}/webrtc/rtc_base",
-        f"./{build_dir}/webrtc/modules/third_party/fft",
-        f"./{build_dir}/webrtc/third_party/pffft",
-        f"./{build_dir}/webrtc/third_party/rnnoise"
-    ]
-    libraries = [
-        "webrtc-audio-processing-2",
-        "libapi", 
-        "common_audio",
-        "libbase",
-        "libfft",
-        "libpffft", 
-        "librnnoise"
-    ]
+    if platform.system() == "Windows":
+        # Windows uses shared libraries
+        library_dirs = [f"./{build_dir}/webrtc/modules/audio_processing"]
+        libraries = ["webrtc-audio-processing-2"]
+    else:
+        # Unix uses static libraries with all components
+        library_dirs = [
+            f"./{build_dir}/webrtc/modules/audio_processing",
+            f"./{build_dir}/webrtc/api", 
+            f"./{build_dir}/webrtc/common_audio",
+            f"./{build_dir}/webrtc/rtc_base",
+            f"./{build_dir}/webrtc/modules/third_party/fft",
+            f"./{build_dir}/webrtc/third_party/pffft",
+            f"./{build_dir}/webrtc/third_party/rnnoise"
+        ]
+        libraries = [
+            "webrtc-audio-processing-2",
+            "libapi", 
+            "common_audio",
+            "libbase",
+            "libfft",
+            "libpffft", 
+            "librnnoise"
+        ]
 
 # Function to get pkg-config information
 def get_pkg_config(library, option):
@@ -174,6 +180,20 @@ all_include_dirs = [
 all_library_dirs = library_dirs + absl_library_dirs
 all_libraries = libraries + absl_libraries
 
+# Setup for packaging DLLs on Windows
+package_data = {}
+if platform.system() == "Windows" and not building_sdist:
+    import glob
+    dll_pattern = f"./{build_dir}/webrtc/modules/audio_processing/*.dll"
+    dll_files = glob.glob(dll_pattern)
+    if dll_files:
+        package_data["webrtc_audio_processing"] = [os.path.basename(f) for f in dll_files]
+        # Copy DLLs to package directory
+        import shutil
+        os.makedirs("webrtc_audio_processing", exist_ok=True)
+        for dll_file in dll_files:
+            shutil.copy2(dll_file, "webrtc_audio_processing/")
+
 ext_modules = [
     Pybind11Extension(
         "webrtc_audio_processing",
@@ -210,6 +230,7 @@ setup(
     },
     ext_modules=ext_modules,
     cmdclass={"build_ext": build_ext},
+    package_data=package_data,
     zip_safe=False,
     python_requires=">=3.8",
     install_requires=[

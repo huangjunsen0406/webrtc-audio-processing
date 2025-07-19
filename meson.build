@@ -104,9 +104,9 @@ elif host_system == 'windows'
   platform_cflags += ['-DNOMINMAX']
   # Ensure M_PI etc are defined
   platform_cflags += ['-D_USE_MATH_DEFINES']
-  # Suppress MSVC DLL interface warnings for static builds
+  # Suppress MSVC warnings for static builds
   if cc.get_id() == 'msvc'
-    platform_cflags += ['/wd4251', '/wd4275']
+    platform_cflags += ['/wd4251', '/wd4275', '/wd4244']
   endif
   os_deps += [cc.find_library('winmm')]
   have_win = true
