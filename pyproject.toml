@@ -1,0 +1,108 @@
+[build-system]
+requires = [
+    "setuptools>=45",
+    "wheel",
+    "pybind11[global]>=2.10.0",
+    "numpy>=1.19.0",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "webrtc-audio-processing"
+version = "2.1.0"
+description = "Python bindings for WebRTC Audio Processing library"
+readme = "README.md"
+license = {text = "BSD-3-Clause"}
+authors = [
+    {name = "WebRTC Audio Processing Team"},
+]
+maintainers = [
+    {name = "WebRTC Audio Processing Team"},
+]
+keywords = [
+    "webrtc",
+    "audio",
+    "processing",
+    "echo cancellation",
+    "noise suppression",
+    "gain control",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: C++",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "numpy>=1.19.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=6.0",
+    "numpy",
+]
+dev = [
+    "pytest>=6.0",
+    "numpy",
+    "pybind11[global]",
+]
+
+[project.urls]
+Homepage = "https://github.com/huangjunsen0406/webrtc-audio-processing"
+Documentation = "https://github.com/huangjunsen0406/webrtc-audio-processing"
+Repository = "https://github.com/huangjunsen0406/webrtc-audio-processing"
+"Bug Tracker" = "https://github.com/huangjunsen0406/webrtc-audio-processing/issues"
+
+[tool.setuptools]
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["webrtc_audio_processing*"]
+
+[tool.cibuildwheel]
+# Build wheels for CPython 3.8-3.12
+build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
+
+# Skip 32-bit builds and PyPy
+skip = "*-win32 *-manylinux_i686 pp*"
+
+# Build settings
+before-build = [
+    "pip install pybind11[global] numpy",
+    "meson setup build_cpp -Dcpp_std=c++17 -Ddefault_library=static -Dbuildtype=release -Db_lto=true",
+    "meson compile -C build_cpp",
+]
+
+# Test the wheels
+test-requires = ["numpy", "pytest"]
+test-command = "python -c 'import webrtc_audio_processing; print(\"Import successful\")'"
+
+# Platform-specific settings
+[tool.cibuildwheel.linux]
+before-all = [
+    "yum install -y ninja-build || apt-get update && apt-get install -y ninja-build || apk add ninja",
+    "pip install meson",
+]
+
+[tool.cibuildwheel.macos]
+before-all = [
+    "brew install ninja || pip install ninja",
+    "pip install meson",
+]
+
+[tool.cibuildwheel.windows]
+before-all = [
+    "pip install meson ninja",
+]

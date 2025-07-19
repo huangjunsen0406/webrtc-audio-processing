@@ -1,0 +1,196 @@
+name: Build Python Wheels
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'python/**'
+      - 'setup.py'
+      - 'pyproject.toml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'python/**'
+      - 'setup.py'
+      - 'pyproject.toml'
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pybind11[global] wheel setuptools
+
+      - name: Install Meson (Unix)
+        if: runner.os != 'Windows'
+        run: pip install meson ninja
+
+      - name: Install Meson (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pip install meson ninja
+          # Install Visual Studio Build Tools
+        shell: cmd
+
+      - name: Set up Visual Studio shell (Windows)
+        if: runner.os == 'Windows'
+        uses: egor-tensin/vs-shell@v2
+        with:
+          arch: x64
+
+      - name: Install build dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential
+
+      - name: Build C++ library
+        run: |
+          meson setup build_cpp -Dcpp_std=c++17 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
+          meson compile -C build_cpp
+
+      - name: Build Python wheel
+        run: |
+          python setup.py bdist_wheel
+
+      - name: Install and test wheel (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          pip install dist/*.whl
+          python -c "import webrtc_audio_processing; print('Import successful')"
+
+      - name: Install and test wheel (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          pip install (Get-ChildItem dist/*.whl)
+          python -c "import webrtc_audio_processing; print('Import successful')"
+        shell: powershell
+
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheels-${{ matrix.os }}
+          path: dist/*.whl
+
+  build_sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Build sdist
+        run: python -m build --sdist
+
+      - name: Upload sdist
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-sdist
+          path: dist/*.tar.gz
+
+  test_wheels:
+    name: Test wheels on ${{ matrix.os }} Python ${{ matrix.python-version }}
+    needs: [build_wheels]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: python-wheels-${{ matrix.os }}
+          path: dist/
+
+      - name: Install wheel and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pytest
+          pip install dist/*.whl
+
+      - name: Run basic tests
+        run: |
+          python -c "
+          import webrtc_audio_processing as wapm
+          import numpy as np
+          
+          # Test basic functionality
+          apm = wapm.AudioProcessing()
+          apm.apply_config(echo_cancellation=True, noise_suppression=True)
+          
+          # Test audio processing
+          audio = np.random.randint(-1000, 1000, 1600, dtype=np.int16)
+          result = apm.process_stream(audio, sample_rate=16000)
+          
+          assert len(result) == len(audio)
+          assert result.dtype == np.int16
+          print('All tests passed!')
+          "
+
+  combine_artifacts:
+    name: Combine all artifacts
+    needs: [build_wheels, build_sdist]
+    runs-on: ubuntu-latest
+    if: always() && (needs.build_wheels.result == 'success' || needs.build_sdist.result == 'success')
+
+    steps:
+      - name: Download all wheel artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: python-wheels-*
+          path: dist/
+          merge-multiple: true
+
+      - name: Download sdist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: python-sdist
+          path: dist/
+
+      - name: List all files
+        run: |
+          echo "Built packages:"
+          ls -la dist/
+
+      - name: Upload combined artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: webrtc-audio-processing-python-packages
+          path: dist/*
