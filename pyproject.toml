@@ -69,7 +69,7 @@ skip = "*-manylinux_i686"  # 只跳过Linux 32位
 archs = ["x86_64", "arm64"]
 
 [tool.cibuildwheel.linux]
-archs = ["x86_64", "aarch64"]
+archs = ["x86_64"]
 
 [tool.cibuildwheel.windows]
 archs = ["x86", "AMD64"]

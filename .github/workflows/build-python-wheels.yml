@@ -37,7 +37,8 @@ jobs:
           CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"  # 支持Python 3.8-3.12
           CIBW_SKIP: "*-manylinux_i686"  # 只跳过Linux 32位，保留Windows 32位
           CIBW_ARCHS_MACOS: "x86_64 arm64"  # macOS支持Intel和Apple Silicon
-          CIBW_ARCHS_LINUX: "x86_64 aarch64"  # Linux支持x64和ARM64
+          # Linux暂时只支持x64，ARM64需要原生runner或emulation
+          CIBW_ARCHS_LINUX: "x86_64"  # Linux支持x64
           CIBW_ARCHS_WINDOWS: "x86 AMD64"  # Windows支持32位和64位
           # Windows specific environment
           CIBW_ENVIRONMENT_WINDOWS: "CL=/std:c++17"
