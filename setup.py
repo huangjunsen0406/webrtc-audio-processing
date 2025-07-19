@@ -5,22 +5,31 @@ import os
 import platform
 
 # Determine the library name and build directory
-if os.path.exists("build_cpp"):
-    build_dir = "build_cpp"
-elif os.path.exists("build"):
-    build_dir = "build"
+# For sdist builds, we don't need the build directory
+import sys
+building_sdist = 'sdist' in sys.argv or 'egg_info' in sys.argv
+
+if building_sdist:
+    build_dir = "build_cpp"  # Default for sdist
+    library_dirs = []
+    libraries = []
 else:
-    raise RuntimeError(
-        "No build directory found. Please run 'meson setup build_cpp' first."
-    )
+    if os.path.exists("build_cpp"):
+        build_dir = "build_cpp"
+    elif os.path.exists("build"):
+        build_dir = "build"
+    else:
+        raise RuntimeError(
+            "No build directory found. Please run 'meson setup build_cpp' first."
+        )
+    library_dirs = [f"./{build_dir}"]
+    libraries = ["webrtc_audio_processing"]
 
 # Platform-specific library settings
 if platform.system() == "Windows":
-    library_name = "webrtc_audio_processing"
     extra_link_args = []
     extra_compile_args = ["/std:c++17"]
 else:
-    library_name = "webrtc_audio_processing"
     extra_link_args = ["-std=c++17"]
     extra_compile_args = ["-std=c++17"]
 
@@ -35,8 +44,8 @@ ext_modules = [
             "webrtc",
             pybind11.get_include(),
         ],
-        libraries=[library_name],
-        library_dirs=[f"./{build_dir}"],
+        libraries=libraries,
+        library_dirs=library_dirs,
         language="c++",
         cxx_std=17,
         extra_compile_args=extra_compile_args,

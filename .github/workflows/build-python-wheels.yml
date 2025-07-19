@@ -44,10 +44,7 @@ jobs:
 
       - name: Install Meson (Windows)
         if: runner.os == 'Windows'
-        run: |
-          pip install meson ninja
-          # Install Visual Studio Build Tools
-        shell: cmd
+        run: pip install meson ninja
 
       - name: Set up Visual Studio shell (Windows)
         if: runner.os == 'Windows'
@@ -79,9 +76,8 @@ jobs:
       - name: Install and test wheel (Windows)
         if: runner.os == 'Windows'
         run: |
-          pip install (Get-ChildItem dist/*.whl)
+          pip install dist/*.whl
           python -c "import webrtc_audio_processing; print('Import successful')"
-        shell: powershell
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
