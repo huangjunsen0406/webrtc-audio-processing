@@ -104,9 +104,9 @@ elif host_system == 'windows'
   platform_cflags += ['-DNOMINMAX']
   # Ensure M_PI etc are defined
   platform_cflags += ['-D_USE_MATH_DEFINES']
-  # Suppress MSVC warnings for static builds
+  # Suppress MSVC warnings for builds
   if cc.get_id() == 'msvc'
-    platform_cflags += ['/wd4251', '/wd4275', '/wd4244']
+    platform_cflags += ['/wd4251', '/wd4275', '/wd4244', '/wd4005']
   endif
   os_deps += [cc.find_library('winmm')]
   have_win = true
@@ -183,10 +183,13 @@ endif
 common_cflags = [
   '-DWEBRTC_LIBRARY_IMPL',
   '-DWEBRTC_ENABLE_SYMBOL_EXPORT',
-  # avoid windows.h/winsock2.h conflicts
-  '-D_WINSOCKAPI_',
   '-DNDEBUG'
   ] + platform_cflags + os_cflags + arch_cflags
+
+# Add _WINSOCKAPI_ only for Windows to avoid conflicts
+if have_win
+  common_cflags += ['-D_WINSOCKAPI_']
+endif
 common_cxxflags = common_cflags
 common_deps = os_deps + [absl_dep]
 webrtc_inc = include_directories('.')
