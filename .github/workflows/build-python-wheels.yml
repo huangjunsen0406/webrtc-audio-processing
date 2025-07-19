@@ -101,7 +101,14 @@ jobs:
           sudo make install
           sudo ldconfig
 
-      - name: Build C++ library
+      - name: Build C++ library (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          meson setup build_cpp -Dcpp_std=c++17 -Ddefault_library=static -Dbuildtype=release -Db_lto=true -Dwarning_level=1 -Dwerror=false
+          meson compile -C build_cpp
+
+      - name: Build C++ library (Unix)
+        if: runner.os != 'Windows'
         run: |
           meson setup build_cpp -Dcpp_std=c++17 -Ddefault_library=static -Dbuildtype=release -Db_lto=true
           meson compile -C build_cpp
