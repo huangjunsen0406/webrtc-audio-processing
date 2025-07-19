@@ -26,8 +26,10 @@ def get_platform_specific_flags():
         definitions.extend(['WEBRTC_LINUX', 'WEBRTC_POSIX'])
         libraries.extend(['rt', 'pthread'])
     elif platform.system() == 'Windows':
-        definitions.extend(['WEBRTC_WIN', '_WIN32', 'NOMINMAX'])
+        definitions.extend(['WEBRTC_WIN', '_WIN32', 'NOMINMAX', '_USE_MATH_DEFINES'])
         libraries.extend(['winmm'])
+        # Windows specific flags
+        flags.extend(['/std:c++17', '/EHsc'])
     
     # Architecture-specific flags
     machine = platform.machine().lower()
