@@ -8,12 +8,16 @@ on:
       - 'python/**'
       - 'setup.py'
       - 'pyproject.toml'
+      - 'meson.build'
+      - '.github/workflows/build-python-wheels.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'python/**'
       - 'setup.py'
       - 'pyproject.toml'
+      - 'meson.build'
+      - '.github/workflows/build-python-wheels.yml'
 
 jobs:
   build_wheels:
