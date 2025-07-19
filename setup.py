@@ -37,8 +37,20 @@ def get_platform_specific_flags():
         definitions.append('WEBRTC_ENABLE_AVX2')
         if platform.system() != 'Windows':
             flags.extend(['-mavx2', '-msse2'])
+        else:
+            # Windows 64-bit specific flags
+            flags.extend(['/arch:AVX2'])
+    elif machine in ['i386', 'i686', 'x86']:
+        # Windows 32-bit support
+        definitions.append('WEBRTC_ARCH_X86')
+        if platform.system() == 'Windows':
+            flags.extend(['/arch:SSE2'])
+        else:
+            flags.extend(['-msse2'])
     elif machine in ['arm64', 'aarch64']:
         definitions.extend(['WEBRTC_ARCH_ARM64', 'WEBRTC_HAS_NEON'])
+    elif machine.startswith('arm'):
+        definitions.extend(['WEBRTC_ARCH_ARM', 'WEBRTC_HAS_NEON'])
     
     return flags, definitions, libraries
 

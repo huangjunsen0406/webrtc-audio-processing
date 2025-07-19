@@ -61,9 +61,9 @@ Documentation = "https://github.com/your-username/webrtc-audio-processing/blob/m
 # 移除meson相关配置，改用setuptools
 
 [tool.cibuildwheel]
-# 构建配置
+# 构建配置 - 桌面端全平台支持
 build = "cp38-* cp39-* cp310-* cp311-* cp312-*"
-skip = "*-win32 *-manylinux_i686"
+skip = "*-manylinux_i686"  # 只跳过Linux 32位
 
 [tool.cibuildwheel.macos]
 archs = ["x86_64", "arm64"]
@@ -72,7 +72,7 @@ archs = ["x86_64", "arm64"]
 archs = ["x86_64", "aarch64"]
 
 [tool.cibuildwheel.windows]
-archs = ["AMD64"]
+archs = ["x86", "AMD64"]
 
 [tool.black]
 line-length = 88

@@ -34,17 +34,22 @@ jobs:
 
       - name: Build wheels
         env:
-          CIBW_BUILD: "cp39-* cp311-*"  # 支持Python 3.9和3.11
-          CIBW_SKIP: "*-win32 *-manylinux_i686"  # 跳过32位构建
+          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-*"  # 支持Python 3.8-3.12
+          CIBW_SKIP: "*-manylinux_i686"  # 只跳过Linux 32位，保留Windows 32位
           CIBW_ARCHS_MACOS: "x86_64 arm64"  # macOS支持Intel和Apple Silicon
-          CIBW_ARCHS_LINUX: "x86_64"  # Linux只支持x64
-          CIBW_ARCHS_WINDOWS: "AMD64"  # Windows只支持x64
+          CIBW_ARCHS_LINUX: "x86_64 aarch64"  # Linux支持x64和ARM64
+          CIBW_ARCHS_WINDOWS: "x86 AMD64"  # Windows支持32位和64位
           # Windows specific environment
           CIBW_ENVIRONMENT_WINDOWS: "CL=/std:c++17"
-          # 在构建前安装系统依赖 - 现在使用setuptools，不需要meson
-          CIBW_BEFORE_ALL_LINUX: ""
+          # 在构建前安装系统依赖
+          CIBW_BEFORE_ALL_LINUX: "yum install -y gcc-c++ || apt-get update && apt-get install -y g++"
           CIBW_BEFORE_ALL_MACOS: ""
           CIBW_BEFORE_ALL_WINDOWS: ""
+          # Linux ARM64 交叉编译支持
+          CIBW_BEFORE_BUILD_LINUX: >
+            if [[ "$AUDITWHEEL_ARCH" == "aarch64" ]]; then
+              echo "Building for Linux ARM64";
+            fi
           # 设置环境变量 - 使用setuptools不需要特殊环境变量
           CIBW_ENVIRONMENT: ""
         run: |
@@ -153,7 +158,15 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.9', '3.11']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        exclude:
+          # 减少测试组合以节省时间，保留关键版本
+          - os: ubuntu-latest
+            python-version: '3.10'
+          - os: windows-latest
+            python-version: '3.10'
+          - os: macos-latest
+            python-version: '3.10'
     steps:
       - name: Set up Python
         uses: actions/setup-python@v5
