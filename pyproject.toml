@@ -92,17 +92,20 @@ test-command = "python -c 'import webrtc_audio_processing; print(\"Import succes
 # Platform-specific settings
 [tool.cibuildwheel.linux]
 before-all = [
-    "yum install -y ninja-build || apt-get update && apt-get install -y ninja-build || apk add ninja",
+    "yum install -y ninja-build libabsl-dev || apt-get update && apt-get install -y ninja-build libabsl-dev || apk add ninja absl-dev",
     "pip install meson",
 ]
 
 [tool.cibuildwheel.macos]
 before-all = [
-    "brew install ninja || pip install ninja",
+    "brew install ninja pkg-config abseil || pip install ninja",
     "pip install meson",
 ]
 
 [tool.cibuildwheel.windows]
 before-all = [
     "pip install meson ninja",
+    "git clone https://github.com/Microsoft/vcpkg.git C:\\vcpkg || echo vcpkg exists",
+    "C:\\vcpkg\\bootstrap-vcpkg.bat || echo vcpkg bootstrapped",
+    "C:\\vcpkg\\vcpkg.exe install abseil[cxx17]:x64-windows || echo abseil installed",
 ]

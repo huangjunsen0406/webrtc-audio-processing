@@ -52,11 +52,34 @@ jobs:
         with:
           arch: x64
 
+      - name: Install vcpkg and Abseil (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          git clone https://github.com/Microsoft/vcpkg.git
+          .\vcpkg\bootstrap-vcpkg.bat
+          .\vcpkg\vcpkg.exe install abseil[cxx17]:x64-windows
+          echo "CMAKE_TOOLCHAIN_FILE=$PWD\vcpkg\scripts\buildsystems\vcpkg.cmake" >> $env:GITHUB_ENV
+
       - name: Install build dependencies (Ubuntu)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential
+
+      - name: Install pkg-config (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install pkg-config
+
+      - name: Install Abseil (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install abseil
+
+      - name: Install Abseil (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y libabsl-dev
 
       - name: Build C++ library
         run: |
