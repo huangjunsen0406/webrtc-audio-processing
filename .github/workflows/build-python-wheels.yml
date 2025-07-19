@@ -83,13 +83,20 @@ jobs:
       - name: Install Abseil (Ubuntu)
         if: runner.os == 'Linux'
         run: |
-          # Try to install a newer version of Abseil from source since libabsl-dev might be too old
+          # Install newer version of Abseil from source with -fPIC for shared library compatibility
           sudo apt-get update
           sudo apt-get install -y cmake build-essential
           git clone --depth=1 --branch=20240722.0 https://github.com/abseil/abseil-cpp.git /tmp/abseil-cpp
           cd /tmp/abseil-cpp
           mkdir build && cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DABSL_BUILD_TESTING=OFF -DCMAKE_CXX_STANDARD=17 -DCMAKE_INSTALL_PREFIX=/usr/local
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DABSL_BUILD_TESTING=OFF \
+            -DCMAKE_CXX_STANDARD=17 \
+            -DCMAKE_INSTALL_PREFIX=/usr/local \
+            -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+            -DCMAKE_CXX_FLAGS="-fPIC" \
+            -DCMAKE_C_FLAGS="-fPIC"
           make -j$(nproc)
           sudo make install
           sudo ldconfig
