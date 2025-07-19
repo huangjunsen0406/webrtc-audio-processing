@@ -23,8 +23,25 @@ else:
         raise RuntimeError(
             "No build directory found. Please run 'meson setup build_cpp' first."
         )
-    library_dirs = [f"./{build_dir}"]
-    libraries = ["webrtc_audio_processing"]
+    # WebRTC library directories and libraries
+    library_dirs = [
+        f"./{build_dir}/webrtc/modules/audio_processing",
+        f"./{build_dir}/webrtc/api", 
+        f"./{build_dir}/webrtc/common_audio",
+        f"./{build_dir}/webrtc/rtc_base",
+        f"./{build_dir}/webrtc/modules/third_party/fft",
+        f"./{build_dir}/webrtc/third_party/pffft",
+        f"./{build_dir}/webrtc/third_party/rnnoise"
+    ]
+    libraries = [
+        "webrtc-audio-processing-2",
+        "libapi", 
+        "common_audio",
+        "libbase",
+        "libfft",
+        "libpffft", 
+        "librnnoise"
+    ]
 
 # Function to get pkg-config information
 def get_pkg_config(library, option):
@@ -35,11 +52,12 @@ def get_pkg_config(library, option):
     except (subprocess.CalledProcessError, FileNotFoundError):
         return []
 
-# Get Abseil dependencies via pkg-config
+# Get Abseil dependencies via pkg-config or use built-in static libraries
 absl_include_dirs = []
 absl_library_dirs = []
 absl_libraries = []
 
+# Try pkg-config first
 for lib in ['absl_base', 'absl_flags', 'absl_strings', 'absl_numeric', 
             'absl_synchronization', 'absl_bad_optional_access']:
     inc_flags = get_pkg_config(lib, '--cflags-only-I')
@@ -51,6 +69,26 @@ for lib in ['absl_base', 'absl_flags', 'absl_strings', 'absl_numeric',
             absl_library_dirs.append(flag[2:])
         elif flag.startswith('-l'):
             absl_libraries.append(flag[2:])
+
+# If pkg-config didn't find libraries, use built-in static libraries
+if not absl_libraries and not building_sdist:
+    absl_subproj_dir = f"./{build_dir}/subprojects"
+    if os.path.exists(absl_subproj_dir):
+        # Find abseil subproject directory
+        for item in os.listdir(absl_subproj_dir):
+            if item.startswith("abseil-cpp"):
+                absl_dir = os.path.join(absl_subproj_dir, item)
+                if os.path.exists(absl_dir):
+                    absl_library_dirs.append(absl_dir)
+                    # Add required Abseil libraries
+                    absl_libraries.extend([
+                        'absl_base', 'absl_flags', 'absl_strings', 'absl_numeric',
+                        'absl_synchronization', 'absl_bad_optional_access', 'absl_time',
+                        'absl_civil_time', 'absl_time_zone', 'absl_int128', 
+                        'absl_throw_delegate', 'absl_raw_logging_internal', 'absl_log_severity',
+                        'absl_spinlock_wait', 'absl_strings_internal', 'absl_string_view'
+                    ])
+                break
 
 # Platform-specific library settings
 if platform.system() == "Windows":
